@@ -26,6 +26,9 @@ pub trait Program {
     fn name(&self) -> &'static str {
         "Unnamed program"
     }
+    fn default_graph(&self) -> &'static str {
+        "./examples/rMat_1k"
+    }
 }
 
 pub fn compile_ptx(input: &str) -> Result<String, failure::Error> {

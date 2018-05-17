@@ -39,6 +39,10 @@ struct Program<'a> {
 
 impl<'a> cugra::Program for Program<'a> {
     type Input = Graph;
+
+    fn name(&self) -> &'static str {
+        "simple_bfs"
+    }
     fn process(&mut self, graph: Self::Input) -> Result<(), failure::Error> {
         use std::iter::repeat;
         use std::mem::ManuallyDrop;
@@ -74,7 +78,7 @@ impl<'a> cugra::Program for Program<'a> {
         self.module.set_symbol("parents", gpu_parents.addr())?;
         self.module.set_symbol("frontier", gpu_offsets.addr())?;
         self.module.set_symbol("n", &graph.n)?;
-        self.module.set_symbol("err", gpu_err);
+        // self.module.set_symbol("err", gpu_err);
 
         let mut len_frontier = 1;
         while len_frontier > 0 {
@@ -152,14 +156,13 @@ impl<'a> cugra::Program for Program<'a> {
 fn main() -> Result<(), failure::Error> {
     cuda::initialize()?;
     let device = cuda::Device(0).context("loading device")?;
-    assert!(device.unified_memory().unwrap_or(false));
+    assert!(device.has_unified_memory().unwrap_or(false));
     let context = device.create_context()?;
     let ptx = cugra::compile_ptx("src/bin/simple_bfs.cu")?;
     let module = context.load_module(ptx)?;
 
     let mut p = Program { module };
-    // cugra::run(&mut p);
-    // cugra::run_file(&mut p, "examples/rMatGraph_J_5_100")?;
-    cugra::run_file(&mut p, "examples/rMat_1k")?;
+    cugra::run(&mut p)?;
+
     Ok(())
 }

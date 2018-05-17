@@ -19,7 +19,7 @@ pub fn run<T: Program>(program: &mut T) -> Result<()> {
     if args.is_present("devicelist") {
         list_devices()
     } else {
-        let path = args.value_of("input").unwrap();
+        let path = args.value_of("input").unwrap_or(program.default_graph());
         run_file(program, path)
     }
 }
@@ -31,8 +31,11 @@ fn parse<'a>() -> clap::ArgMatches<'a> {
         .author("Jason Priest <jpriest@mit.edu>")
         .arg(
             Arg::with_name("input")
-                .required_unless("devicelist")
                 .help("graph file to process"),
+        )
+        .arg(
+            Arg::with_name("devicelist")
+                .help("list cuda capable devices"),
         )
         .get_matches()
 }
