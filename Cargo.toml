@@ -1,0 +1,12 @@
+[package]
+name = "cugra"
+version = "0.1.0"
+authors = ["Jason Priest <jpriest@mit.edu>"]
+
+[dependencies]
+cuda = { git = "https://github.com/JustAPerson/cuda.git" }
+clap = "2"
+env_logger = "0.5"
+log = "0.4"
+failure = "0.1"
+failure_derive = "0.1"
