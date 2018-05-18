@@ -45,7 +45,7 @@ fn list_devices() -> Result<()> {
 
     let n = Device::count()? as u16;
     for i in 0..n {
-        let d = Device(i)?;
+        let d = Device::from_index(i)?;
         println!("device[{}]: {:?}", i, d.name()?);
     }
 

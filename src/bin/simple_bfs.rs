@@ -1,6 +1,7 @@
 #![feature(try_from)]
 extern crate cugra;
 extern crate failure;
+extern crate env_logger;
 
 use failure::ResultExt;
 
@@ -33,11 +34,12 @@ impl From<EdgeList> for Graph {
     }
 }
 
-struct Program<'a> {
-    module: cuda::Module<'a>,
+struct Program {
+    context: cuda::Context,
+    module: cuda::Module,
 }
 
-impl<'a> cugra::Program for Program<'a> {
+impl cugra::Program for Program {
     type Input = Graph;
 
     fn name(&self) -> &'static str {
@@ -63,20 +65,19 @@ impl<'a> cugra::Program for Program<'a> {
             })
         };
 
-        let gpu_offsets = ManuallyDrop::new(cuda::Buffer::from_slice(graph.offsets)?);
-        let gpu_outlist = ManuallyDrop::new(cuda::Buffer::from_slice(graph.outlist)?);
-        let gpu_parents = ManuallyDrop::new(cuda::Buffer::from_iter(
+        let gpu_offsets = self.context.buffer().from_slice(graph.offsets)?;
+        let gpu_outlist = self.context.buffer().from_slice(graph.outlist)?;
+        let gpu_parents = self.context.buffer().from_iter(
             repeat(u32::max_value()).take(graph.n as usize),
-        )?);
-        let gpu_frontier =
-            ManuallyDrop::new(cuda::Buffer::from_iter(repeat(0).take(graph.n as usize))?);
+        )?;
+        let gpu_frontier = self.context.buffer().from_iter(repeat(0).take(graph.n as usize))?;
 
         gpu_frontier.copy_from(&[0])?; // start from 0
         gpu_parents.copy_from(&[0])?; // set parent of start to itself
-        self.module.set_symbol("offsets", gpu_offsets.addr())?;
-        self.module.set_symbol("outlist", gpu_outlist.addr())?;
-        self.module.set_symbol("parents", gpu_parents.addr())?;
-        self.module.set_symbol("frontier", gpu_offsets.addr())?;
+        self.module.set_symbol("offsets", &gpu_offsets.addr())?;
+        self.module.set_symbol("outlist", &gpu_outlist.addr())?;
+        self.module.set_symbol("parents", &gpu_parents.addr())?;
+        self.module.set_symbol("frontier", &gpu_offsets.addr())?;
         self.module.set_symbol("n", &graph.n)?;
         // self.module.set_symbol("err", gpu_err);
 
@@ -84,17 +85,15 @@ impl<'a> cugra::Program for Program<'a> {
         while len_frontier > 0 {
             assert!(len_frontier < graph.n as usize);
 
-            let gpu_nf =
-                ManuallyDrop::new(cuda::Buffer::from_iter(repeat(0u32).take(len_frontier))?);
-            let gpu_nl =
-                ManuallyDrop::new(cuda::Buffer::from_iter(repeat(0u32).take(len_frontier))?);
+            let gpu_nf = self.context.buffer().from_iter(repeat(0u32).take(len_frontier))?;
+            let gpu_nl = self.context.buffer().from_iter(repeat(0u32).take(len_frontier))?;
 
             println!("{} {}", gpu_nf.size(), gpu_nl.size());
             println!("{} {}", gpu_nf.len(), gpu_nl.len());
             println!("{} {}", gpu_nf.addr(), gpu_nl.addr());
 
-            self.module.set_symbol("next_frontier", gpu_nf.addr())?;
-            self.module.set_symbol("next_len", gpu_nl.addr())?;
+            self.module.set_symbol("next_frontier", &gpu_nf.addr())?;
+            self.module.set_symbol("next_len", &gpu_nl.addr())?;
 
             bfs.launch(&[], cuda::Grid::x(len_frontier as u32), cuda::Block::x(1))
                 .map_err(read_err_code)
@@ -127,9 +126,6 @@ impl<'a> cugra::Program for Program<'a> {
 
             let lens = gpu_nl.read_to_vec()?;
             len_frontier = lens[0] as usize;
-
-            ManuallyDrop::into_inner(gpu_nl);
-            ManuallyDrop::into_inner(gpu_nf);
         }
 
         // let parents = gpu_parents.read_to_vec()?;
@@ -144,24 +140,21 @@ impl<'a> cugra::Program for Program<'a> {
             len.as_secs() as f64 + len.subsec_nanos() as f64 * 1e-9
         );
 
-        ManuallyDrop::into_inner(gpu_frontier);
-        ManuallyDrop::into_inner(gpu_parents);
-        ManuallyDrop::into_inner(gpu_outlist);
-        ManuallyDrop::into_inner(gpu_offsets);
-
         Ok(())
     }
 }
 
 fn main() -> Result<(), failure::Error> {
+    env_logger::init();
     cuda::initialize()?;
-    let device = cuda::Device(0).context("loading device")?;
+
+    let device = cuda::Device::from_index(0).context("loading device")?;
     assert!(device.has_unified_memory().unwrap_or(false));
     let context = device.create_context()?;
     let ptx = cugra::compile_ptx("src/bin/simple_bfs.cu")?;
     let module = context.load_module(ptx)?;
 
-    let mut p = Program { module };
+    let mut p = Program { module, context };
     cugra::run(&mut p)?;
 
     Ok(())
