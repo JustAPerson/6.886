@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 extern "C" {
 
 __device__ __constant__ int n;
@@ -27,7 +29,7 @@ __global__ void bfs() {
   int len = offsets[v+1] - out;
 
   int  num_discovered = 0;
-  int* new_frontier = (int*) malloc(len * sizeof(int));
+  int* new_frontier = (int*) malloc(len * sizeof(int)); // TODO handle malloc failure
   if (!new_frontier) {
     err = true;
     return;
@@ -61,8 +63,7 @@ __global__ void reduce(int t, int w) {
   int  bl = next_len[idx+w];
 
   int  cl = al + bl;
-  int* c  = (int*) malloc(cl * sizeof(int));
-  if (!c) { err = MALLOC; return; }
+  int* c  = (int*) malloc(cl * sizeof(int)); // TODO handle malloc failure
   memcpy(c   , a, al*sizeof(int));
   memcpy(c+al, b, bl*sizeof(int));
   free(a);

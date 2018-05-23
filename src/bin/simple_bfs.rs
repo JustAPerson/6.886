@@ -85,7 +85,7 @@ impl cugra::Program for Program {
         while len_frontier > 0 {
             assert!(len_frontier < graph.n as usize);
 
-            let gpu_nf = self.context.buffer().from_iter(repeat(0u32).take(len_frontier))?;
+            let gpu_nf = self.context.buffer().from_iter(repeat(0u64).take(len_frontier))?;
             let gpu_nl = self.context.buffer().from_iter(repeat(0u32).take(len_frontier))?;
 
             println!("{} {}", gpu_nf.size(), gpu_nl.size());
