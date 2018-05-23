@@ -88,10 +88,6 @@ impl cugra::Program for Program {
             let gpu_nf = self.context.buffer().from_iter(repeat(0u64).take(len_frontier))?;
             let gpu_nl = self.context.buffer().from_iter(repeat(0u32).take(len_frontier))?;
 
-            println!("{} {}", gpu_nf.size(), gpu_nl.size());
-            println!("{} {}", gpu_nf.len(), gpu_nl.len());
-            println!("{} {}", gpu_nf.addr(), gpu_nl.addr());
-
             self.module.set_symbol("next_frontier", &gpu_nf.addr())?;
             self.module.set_symbol("next_len", &gpu_nl.addr())?;
 
@@ -102,7 +98,6 @@ impl cugra::Program for Program {
             // flatten frontier arrays
             if len_frontier != 1 {
                 let mut width = (len_frontier + 1) / 2;
-                println!("do we reduce width = {}", width);
                 loop {
                     reduce
                         .launch(

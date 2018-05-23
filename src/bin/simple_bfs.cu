@@ -23,7 +23,6 @@ __global__ void bfs() {
   if (idx >= n) return;
 
   int v = frontier[idx];
-  if (v > n) printf("idx %d v %d n %d\n", idx, v, n);
 
   int out = offsets[v];
   int len = offsets[v+1] - out;
@@ -34,13 +33,10 @@ __global__ void bfs() {
     err = true;
     return;
   }
-  /* printf("v = %d, offset = %d, len = %d, parent = %d\n", v, out, len, parents[v]); */
   for (int i = 0; i < len; i++) {
     int edge = outlist[out + i];
-    /* printf("edge[%d] = %d\n", i, edge); */
 
     int old = atomicCAS(&parents[edge], ~0, v);
-    /* printf("cas %d\n", old); */
     if (old == ~0) {
       new_frontier[num_discovered++] = edge;
     }
@@ -52,10 +48,8 @@ __global__ void bfs() {
 
 __global__ void reduce(int t, int w) {
   int idx = (blockIdx.x * blockDim.x + threadIdx.x);
-  /* printf("reduce(%d, %d) idx=%d\n", t, w, idx); */
   if (idx + w >= t) return;
 
-  /* printf("reduce %d + %d = %d\n", idx, w, idx+w); */
   int* a  = next_frontier[idx];
   int  al = next_len[idx];
 
@@ -71,7 +65,6 @@ __global__ void reduce(int t, int w) {
 
   next_frontier[idx]   = c;
   next_frontier[idx+w] = 0;
-  printf("al, bl %d %d\n", al, bl);
   next_len[idx]   = al+bl;
   next_len[idx+w] = 0;
 }
