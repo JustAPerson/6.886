@@ -43,6 +43,7 @@ pub fn compile_ptx(input: &str) -> Result<String, failure::Error> {
             .into_string()
             .map_err(|_| err_msg("could not parse NVCCFLAGS as utf8"))?;
         cmd.args(nvccflags.split_whitespace());
+        info!("using NVCCFLAGS={}", &nvccflags);
     }
     cmd.args(&["-lcudadevrt", "-dc", "-ptx", input, "-o", &output]);
 
