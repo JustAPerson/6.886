@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 #![feature(try_from)]
 extern crate cugra;
 extern crate failure;
@@ -47,7 +48,6 @@ impl cugra::Program for Program {
     }
     fn process(&mut self, graph: Self::Input) -> Result<(), failure::Error> {
         use std::iter::repeat;
-        use std::mem::ManuallyDrop;
 
         let start = std::time::Instant::now();
         let bfs = self.module.function("bfs").context("loading cuda kernel")?;

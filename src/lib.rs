@@ -1,5 +1,4 @@
 #![feature(try_from)]
-use std::iter::FromIterator;
 
 pub extern crate clap;
 // #[macro_use]
@@ -42,7 +41,7 @@ pub fn compile_ptx(input: &str) -> Result<String, failure::Error> {
     if let Some(osstring) = env::var_os("NVCCFLAGS") {
         let nvccflags = osstring
             .into_string()
-            .map_err(|e| err_msg("could not parse NVCCFLAGS as utf8"))?;
+            .map_err(|_| err_msg("could not parse NVCCFLAGS as utf8"))?;
         cmd.args(nvccflags.split_whitespace());
     }
     cmd.args(&["-lcudadevrt", "-dc", "-ptx", input, "-o", &output]);

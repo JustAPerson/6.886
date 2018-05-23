@@ -87,7 +87,6 @@ impl From<EdgeList> for CompressedOutList {
 
         let mut offsets = Vec::with_capacity(list.n + 1);
 
-        let mut iter = edges.iter();
         let mut offset = 0;
         for i in 0..list.n {
             offsets.push(offset);
