@@ -10,14 +10,13 @@ extern crate failure_derive;
 extern crate log;
 pub extern crate cuda;
 
+mod cli;
 pub mod error;
 pub mod graph;
-mod cli;
 
+pub use cli::*;
 pub use error::CugraError;
 pub use graph::*;
-pub use cli::*;
-
 
 pub trait Program {
     type Input: From<EdgeList>;
@@ -32,29 +31,21 @@ pub trait Program {
 }
 
 pub fn compile_ptx(input: &str) -> Result<String, failure::Error> {
-    use std::path::PathBuf;
-    use std::process::Command;
-    use failure::ResultExt;
+    use failure::{err_msg, ResultExt};
+    use std::{env, path, process};
 
-    let mut output = PathBuf::from(input);
+    let mut output = path::PathBuf::from(input);
     output.set_extension("ptx");
     let output = output.to_str().unwrap();
 
-    let mut cmd = Command::new("nvcc");
-    cmd.args(&[
-        "-ccbin",
-        "clang-3.8",
-        "-arch",
-        "sm_30",
-        "-lcudadevrt",
-        "-dc",
-        "-g",
-        "-G",
-        "-ptx",
-        input,
-        "-o",
-        &output,
-    ]);
+    let mut cmd = process::Command::new("nvcc");
+    if let Some(osstring) = env::var_os("NVCCFLAGS") {
+        let nvccflags = osstring
+            .into_string()
+            .map_err(|e| err_msg("could not parse NVCCFLAGS as utf8"))?;
+        cmd.args(nvccflags.split_whitespace());
+    }
+    cmd.args(&["-lcudadevrt", "-dc", "-ptx", input, "-o", &output]);
 
     assert!(cmd.status().context("running nvcc")?.success());
 
